@@ -67,8 +67,11 @@ export class FileImportBatchJob extends Construct {
       {
         // Possible values
         // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html
-        cpu: 2,
-        memory: cdk.Size.mebibytes(4096),
+        // cpu: 2,
+        // memory: cdk.Size.mebibytes(4096),
+        //unstructed 를 위해서 리소스 올림. pdf 300~400페이지 OOM 방지 
+        cpu: 4,
+        memory: cdk.Size.mebibytes(8192),
         ephemeralStorageSize: cdk.Size.gibibytes(40),
         image: ecs.ContainerImage.fromAsset("lib/shared", {
           platform: aws_ecr_assets.Platform.LINUX_AMD64,
@@ -100,8 +103,10 @@ export class FileImportBatchJob extends Construct {
 
     const fileImportJob = new batch.EcsJobDefinition(this, "FileImportJob", {
       container: fileImportContainer,
-      timeout: cdk.Duration.minutes(30),
-      retryAttempts: 3,
+      // timeout: cdk.Duration.minutes(30),
+      // retryAttempts: 3,
+      timeout: cdk.Duration.minutes(180),
+      retryAttempts: 2,
       retryStrategies: [
         batch.RetryStrategy.of(
           batch.Action.EXIT,
@@ -139,11 +144,16 @@ export class FileImportBatchJob extends Construct {
           resources: [props.openSearchVector.openSearchCollection.attrArn],
         })
       );
-
+//UpdateIndex 추가 by Seongeun
       props.openSearchVector.addToAccessPolicy(
         "file-import-job",
         [fileImportJobRole.roleArn],
-        ["aoss:DescribeIndex", "aoss:ReadDocument", "aoss:WriteDocument"]
+        [
+          "aoss:DescribeIndex",
+          "aoss:UpdateIndex",
+          "aoss:ReadDocument",
+          "aoss:WriteDocument",
+        ]
       );
 
       props.openSearchVector.createOpenSearchWorkspaceWorkflow.grantStartExecution(

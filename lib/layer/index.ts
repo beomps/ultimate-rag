@@ -18,7 +18,7 @@ export class Layer extends Construct {
 
     const { runtime, architecture, path, autoUpgrade } = props;
 
-    const args = ["-t /asset-output/python", "--no-cache-dir"];
+    const args = ["-t /asset-output/python"];
     if (autoUpgrade) {
       args.push("--upgrade");
     }
@@ -31,27 +31,18 @@ export class Layer extends Construct {
         command: [
           "bash",
           "-c",
-          [
-            `pip install -r requirements.txt ${args.join(" ")}`,
-            `cd /asset-output/python`,
-            // Remove boto3 since it's already part of the lambda runtime
-            // Remove sqlalchemy, used by Langchain when storing the memory using sql
-            `rm -rf boto3* botocore* sqlalchemy*`,
-            // Main impact of cold start is the file size. (faster to have the lambda regenerate them)
-            `find . -name "*.pyc" -type f -delete`,
-            `cd -`,
-          ].join(" && "),
+          `pip install -r requirements.txt ${args.join(" ")}`,
         ],
         outputType: cdk.BundlingOutput.AUTO_DISCOVER,
         securityOpt: "no-new-privileges:true",
         network: "host",
       },
     });
-
+//x84,arm 구분 추가
     const layer = new lambda.LayerVersion(this, "Layer", {
       code: lambda.Code.fromBucket(layerAsset.bucket, layerAsset.s3ObjectKey),
       compatibleRuntimes: [runtime],
-      compatibleArchitectures: [architecture],
+      compatibleArchitectures: [lambda.Architecture.X86_64, lambda.Architecture.ARM_64],
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 

@@ -1,3 +1,5 @@
+#가중치 및 CJK, Use_cross_encoder 분기 추가 by Seongeun
+import re
 import genai_core.embeddings
 import genai_core.cross_encoder
 from typing import List
@@ -6,6 +8,18 @@ from aws_lambda_powertools import Logger
 from genai_core.types import CommonError, Task
 
 logger = Logger()
+
+
+VECTOR_WEIGHT = 0.5
+KEYWORD_WEIGHT = 0.5
+
+#CJK Languages check 정규식 추가 by Seongeun
+def check_cjk_lang(input_str):
+    pattern = '[\u3131-\uD79D\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF]'
+    if re.search(pattern, input_str):
+        return True
+    else:
+        return False
 
 
 def query_workspace_open_search(
@@ -23,9 +37,16 @@ def query_workspace_open_search(
     cross_encoder_model_provider = workspace["cross_encoder_model_provider"]
     cross_encoder_model_name = workspace["cross_encoder_model_name"]
     hybrid_search = workspace["hybrid_search"]
+
+    # CJK languages are not good for keyword search
+    use_cross_encoder = True
+    if check_cjk_lang(query):    
+        use_cross_encoder = False
+    
     languages = workspace["languages"]
-    vector_search_limit = 25
-    keyword_search_limit = 25
+    result_limit = 25  # 25
+    vector_search_limit = result_limit
+    keyword_search_limit = result_limit
 
     vector_search_records = []
     keyword_search_records = []
@@ -42,7 +63,9 @@ def query_workspace_open_search(
     )
 
     if cross_encoder_model is None:
-        raise CommonError("Cross encoder model not found")
+        #아래 분기 추가 by Seongeun
+        use_cross_encoder = False
+        # raise CommonError("Cross encoder model not found")
 
     query_embeddings = genai_core.embeddings.generate_embeddings(
         selected_model, [query], Task.RETRIEVE
@@ -52,20 +75,23 @@ def query_workspace_open_search(
 
     client = get_open_search_client()
     vector_search_records = vector_query(
-        client, index_name, query_embeddings, vector_search_limit
+        #normalize 추가 by Seongeun
+        client, index_name, query_embeddings, vector_search_limit, normalize=True
     )
     vector_search_records = _convert_records("vector_search", vector_search_records)
     items.extend(vector_search_records)
 
     if hybrid_search:
         keyword_search_records = keyword_query(
-            client, index_name, query, keyword_search_limit
+            client, index_name, query, keyword_search_limit, normalize=True
         )
 
         keyword_search_records = _convert_records(
             "keyword_search", keyword_search_records
         )
         items.extend(keyword_search_records)
+
+    print(f"Num of search result: {len(items)}")
 
     unique_items = dict({})
     for item in items:
@@ -97,23 +123,36 @@ def query_workspace_open_search(
 
     unique_items = list(unique_items.values())
     score_dict = dict({})
-    if len(unique_items) > 0:
-        passages = [record["content"] for record in unique_items]
-        passage_scores = genai_core.cross_encoder.rank_passages(
-            cross_encoder_model, query, passages
-        )
 
-        for i in range(len(unique_items)):
-            score = passage_scores[i]
-            unique_items[i]["score"] = score
-            score_dict[unique_items[i]["chunk_id"]] = score
-    unique_items = sorted(unique_items, key=lambda x: x["score"], reverse=True)
+    if use_cross_encoder:
+        if len(unique_items) > 0:
+            passages = [record["content"] for record in unique_items]
+            passage_scores = genai_core.cross_encoder.rank_passages(
+                cross_encoder_model, query, passages
+            )
 
-    for record in vector_search_records:
-        record["score"] = score_dict[record["chunk_id"]]
-    for record in keyword_search_records:
-        record["score"] = score_dict[record["chunk_id"]]
+            for i in range(len(unique_items)):
+                score = passage_scores[i]
+                unique_items[i]["score"] = score
+                score_dict[unique_items[i]["chunk_id"]] = score
+        unique_items = sorted(unique_items, key=lambda x: x["score"], reverse=True)
 
+        for record in vector_search_records:
+            record["score"] = score_dict[record["chunk_id"]]
+        for record in keyword_search_records:
+            record["score"] = score_dict[record["chunk_id"]]
+    else:
+        # Simple weighted ensemble 추가 by Seongeun
+        for record in unique_items:
+            score = 0
+            if record["vector_search_score"] is not None:
+                score += record["vector_search_score"] * VECTOR_WEIGHT
+            
+            if record["keyword_search_score"] is not None:
+                score += record["keyword_search_score"] * KEYWORD_WEIGHT
+            
+            record["score"] = score
+    
     if full_response:
         unique_items = unique_items[:limit]
         ret_value = {
@@ -196,24 +235,38 @@ def _convert_records(source: str, records: List[dict]):
 
     return converted_records
 
+#추가 by Seongeun
+def get_aoss_result(client, index_name: str, query: str,
+                    size: int = 25, normalize: bool = False):
+    response = client.search(index=index_name, body=query, size=size)
 
-def vector_query(client, index_name: str, vector: List[float], size: int = 25):
+    if normalize:
+        ret_value = normalize_score(response)
+    else:
+        ret_value = response["hits"]["hits"]
+        ret_value = ret_value if ret_value is not None else []
+
+    return ret_value
+
+#추가 by Seongeun
+def normalize_score(search_results):
+    hits = search_results["hits"]["hits"]
+    if len(hits) == 0:
+        return []
+    
+    max_score = float(search_results["hits"]["max_score"])
+    for hit in hits:
+        hit["_score"] = float(hit["_score"]) / max_score
+    
+    return hits
+
+#normalize 추가 by Seongeun
+def vector_query(client, index_name: str, vector: List[float], size: int = 25, normalize: bool = False):
     query = {"query": {"knn": {"content_embeddings": {"vector": vector, "k": 5}}}}
+    return get_aoss_result(client, index_name, query, size, normalize)
 
-    response = client.search(index=index_name, body=query, size=size)
-
-    ret_value = response["hits"]["hits"]
-    ret_value = ret_value if ret_value is not None else []
-
-    return ret_value
-
-
-def keyword_query(client, index_name: str, text: str, size: int = 25):
+#normalize 추가 by Seongeun
+def keyword_query(client, index_name: str, text: str,
+                  size: int = 25, normalize: bool = False):
     query = {"query": {"match": {"content": text}}}
-
-    response = client.search(index=index_name, body=query, size=size)
-
-    ret_value = response["hits"]["hits"]
-    ret_value = ret_value if ret_value is not None else []
-
-    return ret_value
+    return get_aoss_result(client, index_name, query, size, normalize)

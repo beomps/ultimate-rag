@@ -7,6 +7,7 @@ import {
   Modal,
   SpaceBetween,
   Toggle,
+  Textarea,
 } from "@cloudscape-design/components";
 import { useForm } from "../../common/hooks/use-form";
 import { ChatBotConfiguration } from "./types";
@@ -26,6 +27,8 @@ interface ChatConfigDialogData {
   maxTokens: number;
   temperature: number;
   topP: number;
+  //injectPrompt 추가 by Seongeun
+  injectPrompt: string;
 }
 
 export default function ConfigDialog(props: ConfigDialogProps) {
@@ -37,6 +40,7 @@ export default function ConfigDialog(props: ConfigDialogProps) {
         maxTokens: props.configuration.maxTokens,
         temperature: props.configuration.temperature,
         topP: props.configuration.topP,
+        injectPrompt: props.configuration.injectPrompt,
       };
 
       return retValue;
@@ -71,6 +75,7 @@ export default function ConfigDialog(props: ConfigDialogProps) {
       temperature: props.configuration.temperature,
       maxTokens: props.configuration.maxTokens,
       topP: props.configuration.topP,
+      injectPrompt: props.configuration.injectPrompt,
     });
 
     props.setVisible(false);
@@ -163,6 +168,17 @@ export default function ConfigDialog(props: ConfigDialogProps) {
 
                 onChange({ topP: floatVal });
               }}
+            />
+          </FormField>
+          <FormField
+            label="Prompt"
+            errorText={errors.injectPrompt}
+            description="Put prompt that you want to use"
+          >
+            <Textarea
+              onChange={({ detail }) => onChange({injectPrompt: detail.value})}
+              value={data.injectPrompt}
+              placeholder="Please try to answer correctly for the question."
             />
           </FormField>
         </SpaceBetween>

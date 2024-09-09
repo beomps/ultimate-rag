@@ -128,4 +128,9 @@ export class Utils {
 
     return result !== null;
   }
+  //이미지랑 테이블 url 중복제거. chat-meesage.tsx. by Seongeun
+  static mergeStringList(array1: string[], array2: string[]): string[] {
+    const mergedSet = new Set([...array1, ...array2]);
+    return Array.from(mergedSet);
+  }
 }

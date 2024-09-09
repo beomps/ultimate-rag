@@ -34,12 +34,13 @@ class LLMStartHandler(BaseCallbackHandler):
 
 class ModelAdapter:
     def __init__(
-        self, session_id, user_id, mode=ChatbotMode.CHAIN.value, model_kwargs={}
+        self, session_id, user_id, mode=ChatbotMode.CHAIN.value, model_kwargs={}, inject_prompt=""
     ):
         self.session_id = session_id
         self.user_id = user_id
         self._mode = mode
         self.model_kwargs = model_kwargs
+        self.inject_prompt = inject_prompt
 
         self.callback_handler = LLMStartHandler()
         self.__bind_callbacks()
@@ -86,7 +87,7 @@ class ModelAdapter:
         )
 
     def get_prompt(self):
-        template = """The following is a friendly conversation between a human and an AI. If the AI does not know the answer to a question, it truthfully says it does not know.
+        template = self.inject_prompt + "\n" + """The following is a friendly conversation between a human and an AI. If the AI does not know the answer to a question, it truthfully says it does not know.
 
         Current conversation:
         {chat_history}
@@ -96,10 +97,10 @@ class ModelAdapter:
         return PromptTemplate.from_template(template)
 
     def get_condense_question_prompt(self):
-        return CONDENSE_QUESTION_PROMPT
+        return self.inject_prompt + "\n" +CONDENSE_QUESTION_PROMPT
 
     def get_qa_prompt(self):
-        return QA_PROMPT
+        return self.inject_prompt + "\n" + QA_PROMPT
 
     def run_with_chain(self, user_prompt, workspace_id=None):
         if not self.llm:
@@ -107,6 +108,7 @@ class ModelAdapter:
 
         self.callback_handler.prompts = []
 
+        # RAG
         if workspace_id:
             conversation = ConversationalRetrievalChain.from_llm(
                 self.llm,
@@ -149,6 +151,7 @@ class ModelAdapter:
                 "metadata": metadata,
             }
 
+        # Without RAG
         conversation = ConversationChain(
             llm=self.llm,
             prompt=self.get_prompt(),

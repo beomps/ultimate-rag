@@ -1,7 +1,7 @@
 from typing import List, Optional
 from .client import get_open_search_client
 
-
+#metadata 추가 by Seongeun
 def add_chunks_open_search(
     workspace_id: str,
     document_id: str,
@@ -15,6 +15,7 @@ def add_chunks_open_search(
     chunks: List[str],
     chunk_complements: List[str],
     replace: bool,
+    metadata: List[object],
 ):
     index_name = workspace_id.replace("-", "")
     complements_len = len(chunk_complements) if chunk_complements else 0
@@ -28,6 +29,7 @@ def add_chunks_open_search(
     for idx in range(len(chunk_ids)):
         chunk_id = chunk_ids[idx]
         content = chunks[idx]
+        chunk_meta = metadata[idx] if metadata is not None else None
         content_complement = chunk_complements[idx] if idx < complements_len else None
 
         add_body = {
@@ -42,6 +44,7 @@ def add_chunks_open_search(
             "content": content,
             "content_complement": content_complement,
             "content_embeddings": chunk_embeddings[idx],
+            "metadata": chunk_meta,
         }
 
         client.index(index=index_name, body=add_body)

@@ -9,6 +9,8 @@ export interface ChatBotConfiguration {
   temperature: number;
   topP: number;
   files: ImageFile[] | null;
+  //추가 by Seongeun. 
+  injectPrompt: string;
 }
 
 export interface ChatInputState {
@@ -73,6 +75,7 @@ export interface ChatBotRunRequest {
     text: string;
     mode: string;
     workspaceId?: string;
+    injectPrompt?: string;
     modelKwargs?: Record<string, string | boolean | number>;
   };
 }

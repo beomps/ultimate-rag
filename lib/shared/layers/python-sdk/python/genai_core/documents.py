@@ -33,6 +33,7 @@ RSS_FEED_SCHEDULE_ROLE_ARN = os.environ.get("RSS_FEED_SCHEDULE_ROLE_ARN", "")
 DOCUMENTS_BY_STATUS_INDEX = os.environ.get("DOCUMENTS_BY_STATUS_INDEX", "")
 
 WORKSPACE_OBJECT_TYPE = "workspace"
+PROCESSING_KEY_PREFIX = "data/processed"
 
 s3 = boto3.resource("s3")
 s3_client = boto3.client("s3")
@@ -111,6 +112,25 @@ def list_documents(
     }
 
 
+def set_complex_document_summary(
+        workspace_id: str, document_id: str, doc_title: str, doc_summary: str
+):
+    timestamp = _get_timestamp()
+
+    response = documents_table.update_item(
+            Key={"workspace_id": workspace_id, "document_id": document_id},
+            UpdateExpression="SET doc_title=:docTitle, doc_summary=:docSummary, updated_at=:timestampValue",
+            ExpressionAttributeValues={
+                ":docTitle": doc_title,
+                ":docSummary": doc_summary,
+                ":timestampValue": timestamp,
+            },
+        )
+    
+    print(response)
+    return response
+
+
 def set_document_vectors(
     workspace_id: str, document_id: str, vectors: int, replace: bool
 ):
@@ -124,6 +144,8 @@ def set_document_vectors(
             ":timestampValue": timestamp,
         },
     )
+
+    print(response)
 
     if replace:
         response = documents_table.update_item(
@@ -177,7 +199,7 @@ def get_document(workspace_id: str, document_id: str):
 
     return document
 
-
+#추가 by Seongeun
 def delete_document(workspace_id: str, document_id: str):
     response = documents_table.get_item(
         Key={"workspace_id": workspace_id, "document_id": document_id}
@@ -210,8 +232,8 @@ def delete_document(workspace_id: str, document_id: str):
 
 
 def get_document_content(workspace_id: str, document_id: str):
-    content_key = f"{workspace_id}/{document_id}/content.txt"
-    content_complement_key = f"{workspace_id}/{document_id}/content_complement.txt"
+    content_key = f"{PROCESSING_KEY_PREFIX}/{workspace_id}/{document_id}/content.txt"
+    content_complement_key = f"{PROCESSING_KEY_PREFIX}/{workspace_id}/{document_id}/content_complement.txt"
     if not genai_core.utils.files.file_exists(PROCESSING_BUCKET_NAME, content_key):
         return None
 
@@ -437,7 +459,7 @@ def _process_document_kendra(
     document_type = document["document_type"]
 
     if document_type == "text":
-        processing_object_key = f"{workspace_id}/{document_id}/content.txt"
+        processing_object_key = f"{PROCESSING_KEY_PREFIX}/{workspace_id}/{document_id}/content.txt"
         kendra_object_key = f"documents/{processing_object_key}"
         kendra_metadata_key = (
             f"metadata/documents/{processing_object_key}.metadata.json"
@@ -483,7 +505,7 @@ def _process_document(
     document_type = document["document_type"]
 
     if document_type == "text":
-        object_key = f"{workspace_id}/{document_id}/content.txt"
+        object_key = f"{PROCESSING_KEY_PREFIX}/{workspace_id}/{document_id}/content.txt"
         response = sfn_client.start_execution(
             stateMachineArn=FILE_IMPORT_WORKFLOW_ARN,
             input=json.dumps(
@@ -542,7 +564,7 @@ def _process_document(
         iteration = 1
         crawler_job_id = str(uuid.uuid4())
         iteration_object_key = (
-            f"{workspace_id}/{document_id}/crawler/{crawler_job_id}/{iteration}.json"
+            f"{PROCESSING_KEY_PREFIX}/{workspace_id}/{document_id}/crawler/{crawler_job_id}/{iteration}.json"
         )
         priority_queue = [{"url": url, "priority": 1} for url in set(urls_to_crawl)]
         s3_client.put_object(
@@ -596,11 +618,11 @@ def _upload_document_content(
 ):
     if document_type == "text":
         s3.Object(
-            PROCESSING_BUCKET_NAME, f"{workspace_id}/{document_id}/content.txt"
+            PROCESSING_BUCKET_NAME, f"{PROCESSING_KEY_PREFIX}/{workspace_id}/{document_id}/content.txt"
         ).put(Body=content)
     elif document_type == "qna":
         s3.Object(
-            PROCESSING_BUCKET_NAME, f"{workspace_id}/{document_id}/content.txt"
+            PROCESSING_BUCKET_NAME, f"{PROCESSING_KEY_PREFIX}/{workspace_id}/{document_id}/content.txt"
         ).put(Body=content)
         s3.Object(
             PROCESSING_BUCKET_NAME,

@@ -263,7 +263,7 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
         setReadyState(ReadyState.CLOSED);
       }
     })();
-  }, [appContext, props.session.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [appContext, state.modelsStatus, props]);
 
   useEffect(() => {
     const onWindowScroll = () => {
@@ -369,6 +369,8 @@ export default function ChatInputPanel(props: ChatInputPanelProps) {
         provider: provider,
         sessionId: props.session.id,
         workspaceId: state.selectedWorkspace?.value,
+        //추가 by Seongeun. 창에 작성 한거는 시스템 프롬포트로 사용이 안되기에, 맨 위에 넣어서 사용. 
+        injectPrompt: props.configuration.injectPrompt,
         modelKwargs: {
           streaming: props.configuration.streaming,
           maxTokens: props.configuration.maxTokens,

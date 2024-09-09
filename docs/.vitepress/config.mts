@@ -4,14 +4,15 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "AWS GenAI LLM Chatbot",
   description: "Deploying a Multi-Model and Multi-RAG Powered Chatbot Using AWS CDK on AWS",
-  base: "/aws-genai-llm-chatbot/",
+  // base: "/aws-genai-llm-chatbot/",
+  base: "/ultimate-rag/",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     search: {
       provider: 'local'
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/aws-samples/aws-genai-llm-chatbot' }
+      { icon: 'github', link: 'https://github.com/beomps/ultimate-rag' }
     ],
     nav: [
       { text: 'Home', link: '/' },
@@ -46,6 +47,7 @@ export default defineConfig({
           { text: 'Deploy', link: '/guide/deploy' },
           { text: 'Developer Guide', link: '/guide/developers' },
           { text: 'Development Prioritization', link: '/guide/prioritization' },
+          { text: '개발 및 디버깅 (한국어)', link: '/guide/guide-ko'}
         ]
       },
       {

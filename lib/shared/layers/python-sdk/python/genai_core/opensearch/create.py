@@ -1,3 +1,4 @@
+#형태소 분석 추가 by Seongeun
 from aws_lambda_powertools import Logger
 from .client import get_open_search_client
 
@@ -26,6 +27,7 @@ def create_workspace_index(workspace: dict):
                     "dimension": int(embeddings_model_dimensions),
                     "method": {
                         "name": "hnsw",
+                        # "space_type": "cosinesimil",
                         "space_type": "l2",
                         "engine": "nmslib",
                         "parameters": {"ef_construction": 512, "m": 16},
@@ -51,6 +53,20 @@ def create_workspace_index(workspace: dict):
         },
     }
 
+    """
+    한국어의 경우 형태소 분석기 (nori) 추가사용
+    - 그 외 언어
+      - chinese: smartcn
+      - japanese: kuromoji
+    - AOSS supported plugin
+      - https://docs.aws.amazon.com/ko_kr/opensearch-service/latest/developerguide/serverless-genref.html
+    """
+
+    languages = workspace["languages"]
+    if "korean" in languages:
+        index_body["mappings"]["properties"]["content"]["analyzer"] = "nori"
+        index_body["mappings"]["properties"]["content_complement"]["analyzer"] = "nori"
+    
     response = client.indices.create(index_name, body=index_body)
 
     logger.info("Response for create_workspace_index", response=response)

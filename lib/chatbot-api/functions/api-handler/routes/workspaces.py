@@ -38,7 +38,7 @@ class CreateWorkspaceAuroraRequest(BaseModel):
     chunkSize: int = Field(gt=100)
     chunkOverlap: int = Field(gt=0)
 
-
+#docType추가 by Seongeun
 class CreateWorkspaceOpenSearchRequest(BaseModel):
     kind: str = SAFE_SHORT_STR_VALIDATION
     name: str = Field(min_length=1, max_length=100, pattern=name_regex)
@@ -50,7 +50,8 @@ class CreateWorkspaceOpenSearchRequest(BaseModel):
     hybridSearch: bool
     chunkingStrategy: str = SAFE_SHORT_STR_VALIDATION
     chunkSize: int = Field(gt=0)
-    chunkOverlap: int = Field(gt=0)
+    chunkOverlap: int = Field(gt=0)    
+    docType: str
 
 
 class CreateWorkspaceKendraRequest(BaseModel):
@@ -248,7 +249,11 @@ def _create_workspace_open_search(
 
     if request.chunkOverlap < 0 or request.chunkOverlap >= request.chunkSize:
         raise genai_core.types.CommonError("Invalid chunk overlap")
-
+#docType추가 by Seongeun
+    doc_type = "NORMAL"
+    if request.docType:
+        doc_type = request.docType
+    
     return _convert_workspace(
         genai_core.workspaces.create_workspace_open_search(
             workspace_name=workspace_name,
@@ -262,6 +267,7 @@ def _create_workspace_open_search(
             chunking_strategy=request.chunkingStrategy,
             chunk_size=request.chunkSize,
             chunk_overlap=request.chunkOverlap,
+            doc_type=doc_type,
         )
     )
 
@@ -311,6 +317,7 @@ def _create_workspace_bedrock_kb(
         )
     )
 
+#docType추가 by Seongeun
 
 def _convert_workspace(workspace: dict):
     kendra_index_external = workspace.get("kendra_index_external")
@@ -332,6 +339,7 @@ def _convert_workspace(workspace: dict):
         "chunkingStrategy": workspace.get("chunking_strategy"),
         "chunkSize": workspace.get("chunk_size"),
         "chunkOverlap": workspace.get("chunk_overlap"),
+        "docType": workspace.get("doc_type", ""),
         "vectors": workspace.get("vectors", 0),
         "documents": workspace.get("documents", 0),
         "aossEngine": workspace.get("aoss_engine"),

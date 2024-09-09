@@ -1,5 +1,6 @@
 import * as cognitoIdentityPool from "@aws-cdk/aws-cognito-identitypool-alpha";
 import * as cdk from "aws-cdk-lib";
+import * as cf from "aws-cdk-lib/aws-cloudfront";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as cognito from "aws-cdk-lib/aws-cognito";
@@ -27,6 +28,8 @@ export interface UserInterfaceProps {
   readonly identityPool: cognitoIdentityPool.IdentityPool;
   readonly api: ChatBotApi;
   readonly chatbotFilesBucket: s3.Bucket;
+  //추가 by Seongeun
+  readonly dataProcessingBucket: s3.Bucket;
   readonly crossEncodersEnabled: boolean;
   readonly sagemakerEmbeddingsEnabled: boolean;
 }
@@ -110,6 +113,11 @@ export class UserInterface extends Construct {
           bucket: props.chatbotFilesBucket.bucketName,
           region: cdk.Aws.REGION,
         },
+        //추가 by Seongeun
+        AWSS3DataProcessing: {
+          bucket: props.dataProcessingBucket.bucketName,
+          region: cdk.Aws.REGION,
+        },
       },
       config: {
         auth_federated_provider: props.config.cognitoFederation?.enabled
@@ -129,7 +137,63 @@ export class UserInterface extends Construct {
         privateWebsite: props.config.privateWebsite ? true : false,
       },
     });
+  //추가 by Seongeun start
+    function setPolicyForDataBucket(s3Bucket: s3.Bucket) {
+      props.identityPool.authenticatedRole.addToPrincipalPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+          resources: [
+            `${s3Bucket.bucketArn}/public/*`,
+            `${s3Bucket.bucketArn}/protected/\${cognito-identity.amazonaws.com:sub}/*`,
+            `${s3Bucket.bucketArn}/private/\${cognito-identity.amazonaws.com:sub}/*`,
+          ],
+        })
+      );
 
+      props.identityPool.authenticatedRole.addToPrincipalPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["s3:ListBucket"],
+          resources: [`${s3Bucket.bucketArn}`],
+          conditions: {
+            StringLike: {
+              "s3:prefix": [
+                "public/",
+                "public/*",
+                "protected/",
+                "protected/*",
+                "private/${cognito-identity.amazonaws.com:sub}/",
+                "private/${cognito-identity.amazonaws.com:sub}/*",
+              ],
+            },
+          },
+        })
+      );
+
+      s3Bucket.addCorsRule({
+        allowedMethods: [
+          s3.HttpMethods.GET,
+          s3.HttpMethods.PUT,
+          s3.HttpMethods.POST,
+          s3.HttpMethods.DELETE,
+        ],
+        allowedOrigins: ["*"],
+        allowedHeaders: ["*"],
+        exposedHeaders: [
+          "x-amz-server-side-encryption",
+          "x-amz-request-id",
+          "x-amz-id-2",
+          "ETag",
+        ],
+        maxAge: 3000,
+      });
+    }
+
+    setPolicyForDataBucket(props.chatbotFilesBucket);
+    setPolicyForDataBucket(props.dataProcessingBucket);
+
+    /*
     // Allow authenticated web users to read upload data to the attachments bucket for their chat files
     // ref: https://docs.amplify.aws/lib/storage/getting-started/q/platform/js/#using-amazon-s3
     props.identityPool.authenticatedRole.addToPrincipalPolicy(
@@ -182,6 +246,9 @@ export class UserInterface extends Construct {
       ],
       maxAge: 3000,
     });
+    */
+     //추가 by Seongeun end
+
 
     const asset = s3deploy.Source.asset(appPath, {
       bundling: {

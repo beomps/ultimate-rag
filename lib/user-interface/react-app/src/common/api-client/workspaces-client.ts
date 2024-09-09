@@ -86,6 +86,8 @@ export class WorkspacesClient {
     chunkingStrategy: string;
     chunkSize: number;
     chunkOverlap: number;
+    //추가 by Seongeun
+    docType: string;
   }): Promise<GraphQLResult<GraphQLQuery<CreateOpenSearchWorkspaceMutation>>> {
     const result = API.graphql<GraphQLQuery<CreateOpenSearchWorkspaceMutation>>(
       {

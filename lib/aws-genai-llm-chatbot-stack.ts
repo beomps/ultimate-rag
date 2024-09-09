@@ -122,6 +122,7 @@ export class AwsGenAILLMChatbotStack extends cdk.Stack {
       sessionsTable: chatBotApi.sessionsTable,
       byUserIdIndex: chatBotApi.byUserIdIndex,
       chatbotFilesBucket: chatBotApi.filesBucket,
+      ragEngines: ragEngines,
       createPrivateGateway: ideficsModels.length > 0,
     });
 
@@ -159,6 +160,7 @@ export class AwsGenAILLMChatbotStack extends cdk.Stack {
       identityPool: authentication.identityPool,
       api: chatBotApi,
       chatbotFilesBucket: chatBotApi.filesBucket,
+      dataProcessingBucket: ragEngines!.processingBucket,
       crossEncodersEnabled:
         typeof ragEngines?.sageMakerRagModels?.model !== "undefined",
       sagemakerEmbeddingsEnabled:

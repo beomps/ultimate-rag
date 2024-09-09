@@ -16,6 +16,8 @@ s3 = boto3.client("s3")
 
 FILE_IMPORT_WORKFLOW_ARN = os.environ.get("FILE_IMPORT_WORKFLOW_ARN")
 PROCESSING_BUCKET_NAME = os.environ.get("PROCESSING_BUCKET_NAME")
+#추가 by Seongeun
+PROCESSING_KEY_PREFIX = "data/processed"
 DEFAULT_KENDRA_S3_DATA_SOURCE_BUCKET_NAME = os.environ.get(
     "DEFAULT_KENDRA_S3_DATA_SOURCE_BUCKET_NAME"
 )
@@ -55,8 +57,8 @@ def process_record(record):
     result = genai_core.documents.create_document(
         workspace_id=workspace_id,
         document_type="file",
+        #path 추가 by Seongeun
         path=file_name,
-        title=file_name,
         size_in_bytes=object_size,
     )
 
@@ -94,7 +96,7 @@ def process_record(record):
             workspace_id=workspace_id, document_id=document_id, status="processed"
         )
     else:
-        processing_object_key = f"{workspace_id}/{document_id}/content.txt"
+        processing_object_key = f"{PROCESSING_KEY_PREFIX}/{workspace_id}/{document_id}/content.txt"
         response = sfn_client.start_execution(
             stateMachineArn=FILE_IMPORT_WORKFLOW_ARN,
             input=json.dumps(

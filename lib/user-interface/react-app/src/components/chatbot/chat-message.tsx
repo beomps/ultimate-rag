@@ -24,6 +24,8 @@ import {
 } from "./types";
 
 import { getSignedUrl } from "./utils";
+import { Utils } from "../../common/utils";
+import { fileDistributionUrl } from "../../common/constants";
 
 import "react-json-view-lite/dist/index.css";
 import "../../styles/app.scss";
@@ -43,6 +45,7 @@ export default function ChatMessage(props: ChatMessageProps) {
   const [documentIndex, setDocumentIndex] = useState("0");
   const [promptIndex, setPromptIndex] = useState("0");
   const [selectedIcon, setSelectedIcon] = useState<1 | 0 | null>(null);
+  // const [imageUrlList, setImageUrlList] = useState<string[]>([] as string[]);
 
   useEffect(() => {
     const getSignedUrls = async () => {
@@ -85,6 +88,30 @@ export default function ChatMessage(props: ChatMessageProps) {
       }
     }
   }
+  //추가 by Seongeun.
+  function convertS3UrlListToCloudFrontUrlList(s3UrlList: string[]) {
+    const cloudFrontUrlList: string[] = [];
+    for (let i = 0; i < s3UrlList.length; i++) {
+      const cfUrl = convertS3UrlToCloudFrontUrl(
+        s3UrlList[i],
+        fileDistributionUrl
+      );
+      cloudFrontUrlList.push(cfUrl);
+    }
+    return cloudFrontUrlList;
+  }
+  //추가 by Seongeun
+  function convertS3UrlToCloudFrontUrl(
+    s3Url: string,
+    distributionUrl: string
+  ): string {
+    const pathAfterS3Prefix = s3Url.substring(5);
+    const firstSlashIndex = pathAfterS3Prefix.indexOf("/");
+    const filePath = pathAfterS3Prefix.substring(firstSlashIndex + 1);
+    return `${distributionUrl}${filePath}`;
+  }
+
+  let allMetaImageList: string[] = [];
 
   return (
     <div>
@@ -146,7 +173,26 @@ export default function ChatMessage(props: ChatMessageProps) {
                       <Tabs
                         tabs={(
                           props.message.metadata.documents as RagDocument[]
-                        ).map((p: RagDocument, i) => {
+                      ).map((p: any, i) => {
+                        let urlList: any[] = [];
+                        if (p.metadata?.metadata != null) {
+                          const docMeta = p.metadata?.metadata;
+                          const imageList = [
+                            ...docMeta.table,
+                            ...docMeta.figure,
+                          ];
+                          urlList = [
+                            ...convertS3UrlListToCloudFrontUrlList(imageList),
+                          ];
+
+                          if (urlList.length > 0) {
+                            allMetaImageList = Utils.mergeStringList(
+                              allMetaImageList,
+                              urlList
+                            );
+                          }
+                        }
+
                           return {
                             id: `${i}`,
                             label:
@@ -155,12 +201,35 @@ export default function ChatMessage(props: ChatMessageProps) {
                               p.metadata.document_id.slice(-8),
                             href: p.metadata.path,
                             content: (
+                            <>
                               <Textarea
                                 key={p.metadata.chunk_id}
                                 value={p.page_content}
                                 readOnly={true}
                                 rows={8}
                               />
+
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "10px",
+                                }}
+                              >
+                                {urlList.map((url, index) => (
+                                  <img
+                                    key={index}
+                                    src={url}
+                                    alt={`image-${index}`}
+                                    style={{
+                                      maxWidth: "300px",
+                                      maxHeight: "300px",
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            </>
                             ),
                           };
                         })}
@@ -299,6 +368,32 @@ export default function ChatMessage(props: ChatMessageProps) {
               },
             }}
           />
+
+          {props?.showMetadata && allMetaImageList.length > 0 && (
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "10px",
+                }}
+              >
+                {allMetaImageList.map((url, index) => (
+                  <img
+                    key={index}
+                    src={url}
+                    alt={`image-${index}`}
+                    style={{
+                      maxWidth: "300px",
+                      maxHeight: "300px",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className={styles.thumbsContainer}>
             {(selectedIcon === 1 || selectedIcon === null) && (
               <Button

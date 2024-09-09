@@ -42,6 +42,7 @@ input CreateWorkspaceOpenSearchInput {
   chunkingStrategy: String!
   chunkSize: Int!
   chunkOverlap: Int!
+  docType: String!
 }
 
 input CalculateEmbeddingsInput {
@@ -90,6 +91,7 @@ type Document @aws_cognito_user_pools {
   updatedAt: AWSDateTime
   rssFeedId: String
   rssLastCheckedAt: AWSDateTime
+  docTitle: String
 }
 
 type DocumentResult @aws_cognito_user_pools {
@@ -309,6 +311,7 @@ type Workspace @aws_cognito_user_pools {
   chunkingStrategy: String
   chunkSize: Int
   chunkOverlap: Int
+  docType: String
   vectors: Int
   documents: Int
   sizeInBytes: Int

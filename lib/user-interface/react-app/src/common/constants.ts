@@ -1,6 +1,26 @@
 import { StatusIndicatorProps } from "@cloudscape-design/components";
 import { SemanticSearchResult } from "../API";
 
+//추가 by Seongeun
+const getDistributionUrl = () => {
+  let currentUrl: string = window.location.href;
+  const regex = /^(https?:\/\/[^\/]+\.cloudfront\.net\/)/;
+  const match = currentUrl.match(regex);
+  if (match) {
+    currentUrl = match[1];
+  } else {
+    console.log("CloudFront 도메인을 찾을 수 없습니다.");
+  }
+  if(currentUrl.includes("localhost")){
+    // When testing somewhere different, Need to specify CF distribution (for example localhost, ...)
+    return "https://dtpq8vyk5t5ol.cloudfront.net/";  // It must include "/" at the end
+  }else{
+    return currentUrl;
+  }
+}
+//추가 by Seongeun
+export const fileDistributionUrl = getDistributionUrl();
+//Korean 추가 by Seongeun
 export const languageList = [
   { value: "simple", label: "Simple" },
   { value: "arabic", label: "Arabic" },
@@ -28,6 +48,7 @@ export const languageList = [
   { value: "serbian", label: "Serbian" },
   { value: "spanish", label: "Spanish" },
   { value: "swedish", label: "Swedish" },
+  { value: "korean", label: "Korean" },
 ];
 
 export abstract class Labels {

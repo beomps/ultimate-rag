@@ -17,6 +17,7 @@ export interface PublicWebsiteProps {
   readonly identityPool: cognitoIdentityPool.IdentityPool;
   readonly api: ChatBotApi;
   readonly chatbotFilesBucket: s3.Bucket;
+  readonly dataProcessingBucket: s3.Bucket;
   readonly crossEncodersEnabled: boolean;
   readonly sagemakerEmbeddingsEnabled: boolean;
   readonly websiteBucket: s3.Bucket;
@@ -35,6 +36,8 @@ export class PublicWebsite extends Construct {
     const originAccessIdentity = new cf.OriginAccessIdentity(this, "S3OAI");
     props.websiteBucket.grantRead(originAccessIdentity);
     props.chatbotFilesBucket.grantRead(originAccessIdentity);
+    //추가 by Seongeun
+    props.dataProcessingBucket.grantRead(originAccessIdentity);
     const cfGeoRestrictEnable = props.config.cfGeoRestrictEnable;
     const cfGeoRestrictList = props.config.cfGeoRestrictList;
 
@@ -114,10 +117,34 @@ export class PublicWebsite extends Construct {
               originAccessIdentity,
             },
           },
+          {
+            behaviors: [
+              {
+                pathPattern: "/data/processed/*",
+                allowedMethods: cf.CloudFrontAllowedMethods.ALL,
+                viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                defaultTtl: cdk.Duration.seconds(0),
+                forwardedValues: {
+                  queryString: true,
+                  headers: [
+                    "Referer",
+                    "Origin",
+                    "Authorization",
+                    "Content-Type",
+                    "x-forwarded-user",
+                    "Access-Control-Request-Headers",
+                    "Access-Control-Request-Method",
+                  ],
+                },
+              },
+            ],
+            s3OriginSource: {
+              s3BucketSource: props.dataProcessingBucket,
+              originAccessIdentity,
+            },
+          },
         ],
-        geoRestriction: cfGeoRestrictEnable
-          ? cf.GeoRestriction.allowlist(...cfGeoRestrictList)
-          : undefined,
+        geoRestriction: cfGeoRestrictEnable ? cf.GeoRestriction.allowlist(...cfGeoRestrictList): undefined,
         errorConfigurations: [
           {
             errorCode: 404,

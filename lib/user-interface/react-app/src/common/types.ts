@@ -34,6 +34,10 @@ export interface AppConfig {
     AWSS3: {
       bucket: string;
       region: string;
+    },
+    AWSS3DataProcessing: {
+      bucket: string;
+      region: string;
     };
   };
 }
@@ -79,7 +83,7 @@ export interface AuroraWorkspaceCreateInput {
   chunkSize: number;
   chunkOverlap: number;
 }
-
+//docType 추가 by Seongeun
 export interface OpenSearchWorkspaceCreateInput {
   name: string;
   embeddingsModel: SelectProps.Option | null;
@@ -88,6 +92,7 @@ export interface OpenSearchWorkspaceCreateInput {
   hybridSearch: boolean;
   chunkSize: number;
   chunkOverlap: number;
+  docType: SelectProps.Option | null;
 }
 
 export interface KendraWorkspaceCreateInput {

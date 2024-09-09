@@ -2,7 +2,7 @@ import boto3
 from typing import Optional, List
 
 comprehend = boto3.client("comprehend")
-
+#korean 추가 by Seongeun
 aws_to_pg = {
     # Afrikaans closely related to Dutch. Might not be accurate. Better than nothing.
     "af": "dutch",
@@ -33,6 +33,7 @@ aws_to_pg = {
     "vi": "vietnamese",
     "zh": "chinese",
     "zh-TW": "chinese",
+    "ko": "korean",
 }
 
 

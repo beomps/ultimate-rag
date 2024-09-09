@@ -21,7 +21,10 @@ import { CHATBOT_NAME } from "../../common/constants";
 export default function Chat(props: { sessionId?: string }) {
   const appContext = useContext(AppContext);
   const [running, setRunning] = useState<boolean>(false);
-  const [session, setSession] = useState<{ id: string; loading: boolean } | undefined>();
+  const [session, setSession] = useState<{ id: string; loading: boolean }>({
+    id: props.sessionId ?? uuidv4(),
+    loading: typeof props.sessionId !== "undefined",
+  });
   const [initError, setInitError] = useState<string | undefined>(undefined);
   const [configuration, setConfiguration] = useState<ChatBotConfiguration>(
     () => ({
@@ -31,6 +34,8 @@ export default function Chat(props: { sessionId?: string }) {
       temperature: 0.6,
       topP: 0.9,
       files: null,
+      //추가 by Seongeun. 
+      injectPrompt: "",
     })
   );
 
@@ -149,18 +154,16 @@ export default function Chat(props: { sessionId?: string }) {
         )}
       </div>
       <div className={styles.input_container}>
-        {session &&
-          <ChatInputPanel
-            session={session}
-            running={running}
-            setRunning={setRunning}
-            messageHistory={messageHistory}
-            setMessageHistory={(history) => setMessageHistory(history)}
-            setInitErrorMessage={(error) => setInitError(error)}
-            configuration={configuration}
-            setConfiguration={setConfiguration}
-          />
-        }
+        <ChatInputPanel
+          session={session}
+          running={running}
+          setRunning={setRunning}
+          messageHistory={messageHistory}
+          setMessageHistory={(history) => setMessageHistory(history)}
+          setInitErrorMessage={(error) => setInitError(error)}
+          configuration={configuration}
+          setConfiguration={setConfiguration}
+        />
       </div>
     </div>
   );

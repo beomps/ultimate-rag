@@ -12,6 +12,7 @@ import RouterButton from "../../../components/wrappers/router-button";
 import { OpenSearchForm } from "./opensearch-form";
 
 const nameRegex = /^[\w+_-]+$/;
+//docType 추가 by Seongeun
 const defaults: OpenSearchWorkspaceCreateInput = {
   name: "",
   embeddingsModel: null,
@@ -20,6 +21,7 @@ const defaults: OpenSearchWorkspaceCreateInput = {
   hybridSearch: true,
   chunkSize: 1000,
   chunkOverlap: 200,
+  docType: null,
 };
 
 export default function CreateWorkspaceOpenSearch() {
@@ -104,6 +106,12 @@ export default function CreateWorkspaceOpenSearch() {
       data.crossEncoderModel?.value
     );
 
+
+    let selectedDocType = "NORMAL";
+    if(data.docType?.value){
+      selectedDocType = data.docType?.value
+    }
+
     const apiClient = new ApiClient(appContext);
     try {
       await apiClient.workspaces.createOpenSearchWorkspace({
@@ -117,11 +125,13 @@ export default function CreateWorkspaceOpenSearch() {
         chunkingStrategy: "recursive",
         chunkSize: data.chunkSize,
         chunkOverlap: data.chunkOverlap,
+        docType: selectedDocType,
       });
 
       navigate("/rag/workspaces");
       return;
     } catch (e) {
+      console.error(e);
       setSubmitting(false);
       setGlobalError("Something went wrong");
     }

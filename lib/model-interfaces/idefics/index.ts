@@ -16,6 +16,7 @@ import { Shared } from "../../shared";
 import { SystemConfig } from "../../shared/types";
 import { RemovalPolicy } from "aws-cdk-lib";
 import { NagSuppressions } from "cdk-nag";
+import { RagEngines } from "../../rag-engines";
 
 interface IdeficsInterfaceProps {
   readonly shared: Shared;
@@ -25,6 +26,8 @@ interface IdeficsInterfaceProps {
   readonly byUserIdIndex: string;
   readonly chatbotFilesBucket: s3.Bucket;
   readonly createPrivateGateway: boolean;
+  //ragEngines 추가 by Seongeun
+  readonly ragEngines?: RagEngines;
 }
 
 export class IdeficsInterface extends Construct {
@@ -71,6 +74,10 @@ export class IdeficsInterface extends Construct {
           MESSAGES_TOPIC_ARN: props.messagesTopic.topicArn,
           CHATBOT_FILES_BUCKET_NAME: props.chatbotFilesBucket.bucketName,
           CHATBOT_FILES_PRIVATE_API: api?.url ?? "",
+          WORKSPACES_TABLE_NAME:
+            props.ragEngines?.workspacesTable.tableName ?? "",
+          DOCUMENTS_TABLE_NAME:
+            props.ragEngines?.documentsTable.tableName ?? "",
         },
       }
     );

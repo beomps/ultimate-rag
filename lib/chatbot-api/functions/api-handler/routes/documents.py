@@ -344,7 +344,7 @@ def update_rss_feed(input: dict):
         "status": "updated",
     }
 
-
+#docTitle 추가 by Seongeun
 def _convert_document(document: dict):
     converted_document = {
         "id": document["document_id"],
@@ -362,6 +362,8 @@ def _convert_document(document: dict):
         "updatedAt": document.get("updated_at", None),
         "rssFeedId": document.get("rss_feed_id", None),
         "rssLastCheckedAt": document.get("rss_last_checked", None),
+        "docTitle": document.get("doc_title", None),
+        # "docSummary": document.get("doc_summary", None),
     }
     if "crawler_properties" in document:
         converted_document["crawlerProperties"] = {
